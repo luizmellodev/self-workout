@@ -75,12 +75,19 @@ const mapExerciseFromSupabase = (exercise: SupabaseExercise): Exercise => {
 
 // Get all workouts for the current user
 export const fetchUserWorkouts = async (): Promise<Workout[]> => {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) {
+    console.error("No user logged in");
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('workouts')
     .select(`
       *,
       exercises:workout_exercises(*)
     `)
+    .eq('user_id', user.user.id)
     .order('day_of_week');
 
   if (error) {
@@ -116,9 +123,22 @@ export const createWorkout = async (workout: {
   description?: string;
   day_of_week?: number;
 }): Promise<string | null> => {
+  // Get the current user's ID
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) {
+    console.error("No user logged in");
+    return null;
+  }
+
+  // Fix: Add user_id to the workout data being inserted
+  const workoutWithUserId = {
+    ...workout,
+    user_id: user.user.id
+  };
+  
   const { data, error } = await supabase
     .from('workouts')
-    .insert([workout])
+    .insert([workoutWithUserId]) // Fix: Now we're inserting an array with a single object that has user_id
     .select();
 
   if (error) {
