@@ -4,8 +4,10 @@ import Layout from '@/components/Layout';
 import WorkoutCard from '@/components/WorkoutCard';
 import Calendar from '@/components/Calendar';
 import { getCurrentWorkout, getFutureWorkouts, getRecommendedWorkouts, getWorkoutsByDate } from '@/utils/workoutData';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedDateWorkouts, setSelectedDateWorkouts] = useState(getWorkoutsByDate(selectedDate));
   
@@ -17,6 +19,19 @@ const Index = () => {
     setSelectedDate(date);
     setSelectedDateWorkouts(getWorkoutsByDate(date));
   };
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-2">Welcome to FitTrack</h1>
+            <p className="text-gray-600">Please log in to access your workouts</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
