@@ -1,18 +1,54 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import { getWorkoutById } from '@/utils/workoutData';
+import EmptyState from '@/components/EmptyState';
+import { workoutSupabaseService } from '@/services/workoutSupabaseService';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Workout } from '@/utils/workoutData';
 
 const WorkoutDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const workout = getWorkoutById(id || '');
+  const [workout, setWorkout] = useState<Workout | null>(null);
+  const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState(workout?.exercises || []);
+
+  useEffect(() => {
+    if (id) {
+      loadWorkout(id);
+    }
+  }, [id]);
+
+  const loadWorkout = async (workoutId: string) => {
+    setLoading(true);
+    try {
+      const workoutData = await workoutSupabaseService.getWorkoutById(workoutId);
+      setWorkout(workoutData);
+      setExercises(workoutData?.exercises || []);
+    } catch (error) {
+      console.error('Error loading workout:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+            <ArrowLeft size={18} className="mr-2" />
+            Voltar
+          </Button>
+          <p className="text-gray-600">Carregando treino...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!workout) {
     return (
@@ -20,9 +56,12 @@ const WorkoutDetail = () => {
         <div className="py-6">
           <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
             <ArrowLeft size={18} className="mr-2" />
-            Back
+            Voltar
           </Button>
-          <h2 className="text-2xl font-bold mb-4">Workout not found</h2>
+          <EmptyState 
+            type="workouts" 
+            onAction={() => navigate('/workouts')}
+          />
         </div>
       </Layout>
     );
@@ -40,30 +79,29 @@ const WorkoutDetail = () => {
 
   const completeWorkout = () => {
     toast({
-      title: "Workout completed!",
-      description: "Great job! Your progress has been saved.",
+      title: "Treino concluído!",
+      description: "Parabéns! Seu progresso foi salvo.",
     });
-    // In a real app, this would save to the backend
     navigate('/workouts');
   };
 
   const getWorkoutTypeLabel = (type: string) => {
     switch (type) {
       case 'strength':
-        return 'Strength Training';
+        return 'Musculação';
       case 'cardio':
         return 'Cardio';
       case 'flexibility':
-        return 'Flexibility';
+        return 'Flexibilidade';
       case 'rest':
-        return 'Rest Day';
+        return 'Descanso';
       default:
         return type;
     }
   };
 
   const date = new Date(workout.date);
-  const formattedDate = date.toLocaleDateString('en-US', {
+  const formattedDate = date.toLocaleDateString('pt-BR', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -77,7 +115,7 @@ const WorkoutDetail = () => {
       <div className="py-6">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft size={18} className="mr-2" />
-          Back
+          Voltar
         </Button>
 
         <div className="mb-6">
@@ -90,52 +128,58 @@ const WorkoutDetail = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <h2 className="font-semibold text-lg mb-4">Exercises</h2>
-          <div className="space-y-4">
-            {exercises.map(exercise => (
-              <div key={exercise.id} className="flex items-center p-3 rounded-lg border border-gray-100">
-                <Checkbox
-                  id={exercise.id}
-                  checked={!!exercise.completed}
-                  onCheckedChange={() => handleExerciseToggle(exercise.id)}
-                  className="mr-3"
-                  disabled={workout.completed || !isToday}
-                />
-                <div className="flex-grow">
-                  <label 
-                    htmlFor={exercise.id} 
-                    className={`font-medium ${exercise.completed ? 'line-through text-gray-400' : ''}`}
-                  >
-                    {exercise.name}
-                  </label>
-                  <div className="text-sm text-gray-500">
-                    {exercise.sets && exercise.reps && (
-                      <span>{exercise.sets} sets × {exercise.reps} reps</span>
-                    )}
-                    {exercise.weight && <span> · {exercise.weight} kg</span>}
-                    {exercise.duration && <span>{exercise.duration} min</span>}
+        {exercises.length > 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+            <h2 className="font-semibold text-lg mb-4">Exercícios</h2>
+            <div className="space-y-4">
+              {exercises.map(exercise => (
+                <div key={exercise.id} className="flex items-center p-3 rounded-lg border border-gray-100">
+                  <Checkbox
+                    id={exercise.id}
+                    checked={!!exercise.completed}
+                    onCheckedChange={() => handleExerciseToggle(exercise.id)}
+                    className="mr-3"
+                    disabled={workout.completed || !isToday}
+                  />
+                  <div className="flex-grow">
+                    <label 
+                      htmlFor={exercise.id} 
+                      className={`font-medium ${exercise.completed ? 'line-through text-gray-400' : ''}`}
+                    >
+                      {exercise.name}
+                    </label>
+                    <div className="text-sm text-gray-500">
+                      {exercise.sets && exercise.reps && (
+                        <span>{exercise.sets} séries × {exercise.reps} reps</span>
+                      )}
+                      {exercise.weight && <span> · {exercise.weight} kg</span>}
+                      {exercise.duration && <span>{exercise.duration} min</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+            <EmptyState type="workouts" />
+          </div>
+        )}
 
         {isToday && !workout.completed && (
           <Button 
             className="w-full workout-gradient text-white"
             onClick={completeWorkout}
           >
-            Complete Workout
+            Concluir Treino
           </Button>
         )}
 
         {isPast && !workout.completed && !isToday && (
           <div className="text-center">
-            <p className="text-gray-500 mb-2">This workout wasn't marked as completed.</p>
+            <p className="text-gray-500 mb-2">Este treino não foi marcado como concluído.</p>
             <Button variant="outline" onClick={completeWorkout}>
-              Mark as Completed
+              Marcar como Concluído
             </Button>
           </div>
         )}
