@@ -20,7 +20,9 @@ const Workouts = () => {
   const loadWorkouts = async () => {
     setLoading(true);
     try {
+      console.log('Loading workouts for workouts page...');
       const allWorkouts = await workoutSupabaseService.getWorkouts();
+      console.log('Loaded workouts:', allWorkouts);
       setWorkouts(allWorkouts);
     } catch (error) {
       console.error('Error loading workouts:', error);
@@ -33,14 +35,15 @@ const Workouts = () => {
     const today = new Date();
     const todayDayOfWeek = today.getDay();
     return workouts.filter(workout => {
-      // For now, just return workouts that could be for today
-      // In a real app, you'd have better date matching
-      return true; // Placeholder logic
+      // Check if workout is scheduled for today's day of the week
+      const workoutDate = new Date(workout.date);
+      return workoutDate.getDay() === todayDayOfWeek;
     });
   };
 
   const getPastWorkouts = () => {
     // For now, return empty as we don't have completed workouts logic
+    // In the future, you could add a 'completed_at' field to track this
     return [];
   };
 

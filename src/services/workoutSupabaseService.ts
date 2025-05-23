@@ -27,9 +27,18 @@ export interface SupabaseWorkoutExercise {
 
 export const workoutSupabaseService = {
   async getWorkouts(): Promise<Workout[]> {
+    console.log('Fetching all workouts...');
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('No authenticated user found');
+      return [];
+    }
+
     const { data: workouts, error } = await supabase
       .from('workouts')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -38,8 +47,11 @@ export const workoutSupabaseService = {
     }
 
     if (!workouts || workouts.length === 0) {
+      console.log('No workouts found for user');
       return [];
     }
+
+    console.log('Found workouts:', workouts);
 
     // Get exercises for all workouts
     const workoutIds = workouts.map(w => w.id);
@@ -48,6 +60,8 @@ export const workoutSupabaseService = {
       .select('*')
       .in('workout_id', workoutIds)
       .order('order_position');
+
+    console.log('Found exercises:', exercises);
 
     // Convert to app format
     return workouts.map(workout => ({
@@ -71,11 +85,21 @@ export const workoutSupabaseService = {
   },
 
   async getWorkoutsByDate(date: Date): Promise<Workout[]> {
+    console.log('Fetching workouts for date:', date);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('No authenticated user found');
+      return [];
+    }
+
     const dayOfWeek = date.getDay();
+    console.log('Looking for workouts on day of week:', dayOfWeek);
     
     const { data: workouts, error } = await supabase
       .from('workouts')
       .select('*')
+      .eq('user_id', user.id)
       .eq('day_of_week', dayOfWeek);
 
     if (error) {
@@ -84,8 +108,11 @@ export const workoutSupabaseService = {
     }
 
     if (!workouts || workouts.length === 0) {
+      console.log('No workouts found for this day');
       return [];
     }
+
+    console.log('Found workouts for day:', workouts);
 
     // Get exercises for these workouts
     const workoutIds = workouts.map(w => w.id);
@@ -116,10 +143,19 @@ export const workoutSupabaseService = {
   },
 
   async getWorkoutById(id: string): Promise<Workout | null> {
+    console.log('Fetching workout by id:', id);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('No authenticated user found');
+      return null;
+    }
+
     const { data: workout, error } = await supabase
       .from('workouts')
       .select('*')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single();
 
     if (error || !workout) {
@@ -127,11 +163,15 @@ export const workoutSupabaseService = {
       return null;
     }
 
+    console.log('Found workout:', workout);
+
     const { data: exercises } = await supabase
       .from('workout_exercises')
       .select('*')
       .eq('workout_id', id)
       .order('order_position');
+
+    console.log('Found exercises for workout:', exercises);
 
     return {
       id: workout.id,
@@ -152,9 +192,9 @@ export const workoutSupabaseService = {
   },
 
   getDayName(dayOfWeek?: number): string {
-    if (dayOfWeek === undefined || dayOfWeek === null) return 'Any day';
+    if (dayOfWeek === undefined || dayOfWeek === null) return 'Qualquer dia';
     
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[dayOfWeek] || 'Any day';
+    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    return days[dayOfWeek] || 'Qualquer dia';
   }
 };

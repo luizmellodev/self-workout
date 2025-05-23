@@ -26,7 +26,9 @@ const WorkoutDetail = () => {
   const loadWorkout = async (workoutId: string) => {
     setLoading(true);
     try {
+      console.log('Loading workout detail for id:', workoutId);
       const workoutData = await workoutSupabaseService.getWorkoutById(workoutId);
+      console.log('Loaded workout data:', workoutData);
       setWorkout(workoutData);
       setExercises(workoutData?.exercises || []);
     } catch (error) {
@@ -124,7 +126,7 @@ const WorkoutDetail = () => {
             <span className="text-sm bg-workout-light text-workout-primary px-2 py-1 rounded-full">
               {getWorkoutTypeLabel(workout.type)}
             </span>
-            <span className="text-sm text-gray-600">{formattedDate}</span>
+            <span className="text-sm text-gray-600">{workout.day}</span>
           </div>
         </div>
 

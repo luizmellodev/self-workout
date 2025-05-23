@@ -14,7 +14,6 @@ const Index = () => {
   const [selectedDateWorkouts, setSelectedDateWorkouts] = useState<Workout[]>([]);
   const [todayWorkouts, setTodayWorkouts] = useState<Workout[]>([]);
   const [upcomingWorkouts, setUpcomingWorkouts] = useState<Workout[]>([]);
-  const [recommendations, setRecommendations] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,20 +25,23 @@ const Index = () => {
   const loadWorkouts = async () => {
     setLoading(true);
     try {
-      const allWorkouts = await workoutSupabaseService.getWorkouts();
+      console.log('Loading workouts for home page...');
       
       // Today's workouts
       const today = new Date();
       const todayWorkoutsData = await workoutSupabaseService.getWorkoutsByDate(today);
+      console.log('Today workouts:', todayWorkoutsData);
       setTodayWorkouts(todayWorkoutsData);
       
       // Selected date workouts (initially today)
       const selectedWorkoutsData = await workoutSupabaseService.getWorkoutsByDate(selectedDate);
+      console.log('Selected date workouts:', selectedWorkoutsData);
       setSelectedDateWorkouts(selectedWorkoutsData);
       
-      // Mock upcoming and recommendations (you can implement these later)
+      // Get all workouts for upcoming section
+      const allWorkouts = await workoutSupabaseService.getWorkouts();
+      console.log('All workouts:', allWorkouts);
       setUpcomingWorkouts(allWorkouts.slice(0, 3));
-      setRecommendations(allWorkouts.slice(0, 2));
     } catch (error) {
       console.error('Error loading workouts:', error);
     } finally {
@@ -48,8 +50,10 @@ const Index = () => {
   };
 
   const handleDateSelect = async (date: Date) => {
+    console.log('Date selected:', date);
     setSelectedDate(date);
     const workouts = await workoutSupabaseService.getWorkoutsByDate(date);
+    console.log('Workouts for selected date:', workouts);
     setSelectedDateWorkouts(workouts);
   };
 
@@ -91,7 +95,7 @@ const Index = () => {
         {selectedDateWorkouts.length > 0 ? (
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-3">
-              {isToday ? "Treino de Hoje" : `Treino em ${selectedDate.toLocaleDateString()}`}
+              {isToday ? "Treino de Hoje" : `Treino em ${selectedDate.toLocaleDateString('pt-BR')}`}
             </h2>
             {selectedDateWorkouts.map(workout => (
               <WorkoutCard 
@@ -104,7 +108,7 @@ const Index = () => {
         ) : (
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-3">
-              {isToday ? "Treino de Hoje" : `Treino em ${selectedDate.toLocaleDateString()}`}
+              {isToday ? "Treino de Hoje" : `Treino em ${selectedDate.toLocaleDateString('pt-BR')}`}
             </h2>
             <EmptyState 
               type={isToday ? "today" : "calendar"} 
@@ -122,26 +126,19 @@ const Index = () => {
           </div>
         )}
 
-        {upcomingWorkouts.length > 0 && !isToday && (
+        {upcomingWorkouts.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">Próximos Treinos</h2>
-            <WorkoutCard workout={upcomingWorkouts[0]} />
-            {upcomingWorkouts.length > 1 && (
-              <div className="text-center mt-2">
+            <h2 className="text-lg font-semibold mb-3">Seus Treinos</h2>
+            {upcomingWorkouts.slice(0, 2).map(workout => (
+              <WorkoutCard key={workout.id} workout={workout} />
+            ))}
+            {upcomingWorkouts.length > 2 && (
+              <div className="text-center mt-4">
                 <a href="/workouts" className="text-workout-primary text-sm font-medium">
-                  Ver todos ({upcomingWorkouts.length}) próximos treinos
+                  Ver todos ({upcomingWorkouts.length}) treinos
                 </a>
               </div>
             )}
-          </div>
-        )}
-
-        {recommendations.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-3">Recomendados Para Você</h2>
-            {recommendations.map(workout => (
-              <WorkoutCard key={workout.id} workout={workout} />
-            ))}
           </div>
         )}
 
