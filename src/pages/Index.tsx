@@ -20,41 +20,57 @@ const Index = () => {
   const [upcomingWorkouts, setUpcomingWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [allWorkouts, setAllWorkouts] = useState<Workout[]>([]);
-
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const cached = localStorage.getItem("workouts");
+  const parsedWorkouts: Workout[] = cached ? JSON.parse(cached) : [];
   useEffect(() => {
-    if (user) {
-      loadWorkouts();
+    if (user && !hasLoaded) {
+      if (parsedWorkouts.length > 0) {
+        setAllWorkouts(parsedWorkouts);
+        setLoading(false);
+        return;
+      } else {
+        loadWorkouts().then(() => {
+          setHasLoaded(true);
+        });
+      }
     }
-  }, [user]);
+  }, [user, hasLoaded]);
 
   const loadWorkouts = async () => {
     setLoading(true);
     try {
-      console.log("Loading workouts for home page...");
-
       const allWorkoutsData = await workoutSupabaseService.getWorkouts();
       setAllWorkouts(allWorkoutsData);
       setUpcomingWorkouts(allWorkoutsData.slice(0, 3));
       console.log("All workouts:", allWorkoutsData);
 
-      // Today's workouts
       const today = new Date();
-      const todayWorkoutsData = await workoutSupabaseService.getWorkoutsByDate(
-        today
-      );
-      console.log("Today workouts:", todayWorkoutsData);
-      setTodayWorkouts(todayWorkoutsData);
+      const todayStr = today.toDateString();
+      const selectedStr = selectedDate.toDateString();
 
-      // Selected date workouts (initially today)
-      const selectedWorkoutsData =
-        await workoutSupabaseService.getWorkoutsByDate(selectedDate);
-      console.log("Selected date workouts:", selectedWorkoutsData);
+      let todayWorkoutsData: Workout[] = [];
+      let selectedWorkoutsData: Workout[] = [];
+
+      if (todayStr === selectedStr) {
+        todayWorkoutsData = await workoutSupabaseService.getWorkoutsByDate(
+          today
+        );
+        selectedWorkoutsData = todayWorkoutsData;
+      } else {
+        todayWorkoutsData = await workoutSupabaseService.getWorkoutsByDate(
+          today
+        );
+        selectedWorkoutsData = await workoutSupabaseService.getWorkoutsByDate(
+          selectedDate
+        );
+      }
+
+      setTodayWorkouts(todayWorkoutsData);
       setSelectedDateWorkouts(selectedWorkoutsData);
 
-      // Get all workouts for upcoming section
-      const allWorkouts = await workoutSupabaseService.getWorkouts();
-      console.log("All workouts:", allWorkouts);
-      setUpcomingWorkouts(allWorkouts.slice(0, 3));
+      // Salva no cache apenas os treinos gerais (semporais)
+      localStorage.setItem("workouts", JSON.stringify(allWorkoutsData));
     } catch (error) {
       console.error("Error loading workouts:", error);
     } finally {
@@ -62,12 +78,19 @@ const Index = () => {
     }
   };
 
-  const handleDateSelect = async (date: Date) => {
+  const handleDateSelect = (date: Date) => {
     console.log("Date selected:", date);
     setSelectedDate(date);
-    const workouts = await workoutSupabaseService.getWorkoutsByDate(date);
-    console.log("Workouts for selected date:", workouts);
-    setSelectedDateWorkouts(workouts);
+
+    const selectedDateStr = date.toDateString();
+
+    const filteredWorkouts = allWorkouts.filter((workout) => {
+      const workoutDateStr = new Date(workout.date).toDateString();
+      return workoutDateStr === selectedDateStr;
+    });
+
+    console.log("Filtered workouts from cache:", filteredWorkouts);
+    setSelectedDateWorkouts(filteredWorkouts);
   };
 
   if (!user) {
@@ -107,7 +130,7 @@ const Index = () => {
           </p>
         </div>
 
-        <Calendar onDateSelect={handleDateSelect} workouts={allWorkouts} />
+        <Calendar onDateSelect={handleDateSelect} workouts={parsedWorkouts} />
 
         {selectedDateWorkouts.length > 0 ? (
           <div className="mb-6">

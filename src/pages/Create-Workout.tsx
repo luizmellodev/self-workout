@@ -6,6 +6,7 @@ const CreateWorkout = () => {
   const [name, setName] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
+  const [repeatDays, setRepeatDays] = useState<string[]>([]);
 
   // Novo estado para data do treino
   const [date, setDate] = useState(() => {
@@ -20,7 +21,11 @@ const CreateWorkout = () => {
     type: "success" | "error";
   } | null>(null);
 
-  // resto do código igual ...
+  const toggleRepeatDay = (day: string) => {
+    setRepeatDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
 
   const addExercise = () => {
     setExercises((prev) => [
@@ -73,12 +78,14 @@ const CreateWorkout = () => {
 
     setLoading(true);
 
-    const workoutToCreate: Omit<Workout, "completed" | "type"> = {
+    const workoutToCreate: Omit<Workout, "completed" | "type"> & {
+      repeatDays?: string[];
+    } = {
       id: "",
       name,
       exercises,
-      // transformar date YYYY-MM-DD para ISO completo para guardar no banco
       date: new Date(date).toISOString(),
+      repeatDays: repeatDays.length > 0 ? repeatDays : undefined,
     };
 
     const created = await workoutSupabaseService.createWorkout(workoutToCreate);
@@ -233,6 +240,43 @@ const CreateWorkout = () => {
         >
           + Adicionar exercício
         </button>
+      </div>
+
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2 text-gray-700">
+          Repetir treino semanalmente
+        </h3>
+        <div className="grid grid-cols-4 gap-2">
+          {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map(
+            (dayLabel, idx) => {
+              const dayValue = [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun",
+              ][idx];
+              const isSelected = repeatDays.includes(dayValue);
+              return (
+                <button
+                  key={dayValue}
+                  type="button"
+                  onClick={() => toggleRepeatDay(dayValue)}
+                  className={`px-3 py-1 rounded-md border text-sm font-medium 
+            ${
+              isSelected
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-800 border-gray-300"
+            } hover:bg-blue-500 hover:text-white transition`}
+                >
+                  {dayLabel}
+                </button>
+              );
+            }
+          )}
+        </div>
       </div>
 
       <button
